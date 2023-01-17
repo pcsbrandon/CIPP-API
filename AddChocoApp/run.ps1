@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 
 Write-Host "PowerShell HTTP trigger function processed a request."
 $ChocoApp = $request.body
@@ -27,10 +27,11 @@ $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Results = foreach ($Tenant in $tenants) {
     try {
         $CompleteObject = [PSCustomObject]@{
-            tenant          = $tenant
-            Applicationname = $ChocoApp.ApplicationName
-            assignTo        = $assignTo
-            IntuneBody      = $intunebody
+            tenant             = $tenant
+            Applicationname    = $ChocoApp.ApplicationName
+            assignTo           = $assignTo
+            InstallationIntent = $request.body.InstallationIntent
+            IntuneBody         = $intunebody
         } | ConvertTo-Json -Depth 15
         $Table = Get-CippTable -tablename 'apps'
         $Table.Force = $true
@@ -39,7 +40,7 @@ $Results = foreach ($Tenant in $tenants) {
             RowKey       = "$((New-Guid).GUID)"
             PartitionKey = "apps"
         }
-        "Succesfully added Choco App for $($Tenant) to queue."
+        "Successfully added Choco App for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
     catch {
